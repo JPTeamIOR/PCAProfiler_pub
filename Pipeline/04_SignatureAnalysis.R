@@ -45,23 +45,21 @@ tmp$Name = rownames(tmp)
 mdata = merge(mdata, tmp, by="Name")
 rownames(mdata) = mdata$Name
 mdata = mdata[colnames(ncount),]
-pca = pcaPlot(ncount, mdata$PC.Type, 2000, 1, 2)
-mdata$PC1 = pca$x[,1]
-mdata$PC2 = pca$x[,2]
-mdata$PC3 = pca$x[,3]
-mdata$AR = ncount[g_info$gene_id[g_info$gene_name == "AR"],]
-dir.create("./SignaturesGraphs", showWarnings = F)
 
-pdf("./SignaturesGraphs/AR_NE_scores.pdf", width = 10)
-ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, color=NE_GSET))
-ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, color=AR_GSET))
-ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, color=AR))
+mdata$AR = ncount[g_info$gene_id[g_info$gene_name == "AR"],mdata$Name]
+outdir= "./results_04_SignaturesGraphs/"
+dir.create(outdir, showWarnings = F)
+
+pdf(paste0(outdir,"/AR_NE_scores.pdf"), width = 10)
+ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, fill=NE_GSET), size=3, shape=21) + theme_classic() + scale_fill_gradient2(low="blue", high="red", midpoint = (max(mdata$NE_GSET) + min(mdata$NE_GSET) )/2 )
+ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, fill=AR_GSET), size=3, shape=21)+ theme_classic() + scale_fill_gradient2(low="blue", high="red", midpoint = (max(mdata$AR_GSET) + min(mdata$AR_GSET) )/2)
+ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, fill=AR), size=3, shape=21)+ theme_classic()+ scale_fill_gradient2(low="blue", high="red", midpoint = (max(mdata$AR) + min(mdata$AR) )/2)
 
 NE_thr=max(mdata$NE_GSET[mdata$PC.Type != "CRPC"])
-ggplot(mdata)+ geom_point(aes(x=PC.Type, y=NE_GSET), position = position_jitter(0.1))+geom_hline(yintercept = NE_thr)
-ggplot(mdata)+ geom_point(aes(x=PC.Type, y=AR_GSET), position = position_jitter(0.1))
-ggplot(mdata)+ geom_point(aes(x=PC.Type, y=AR), position = position_jitter(0.1))
-ggplot(mdata)+ geom_point(aes(x=AR_GSET, y=AR, color=PC.Type))
+ggplot(mdata)+ geom_point(aes(x=PC.Type, y=NE_GSET), position = position_jitter(0.1))+geom_hline(yintercept = NE_thr)+ theme_classic()
+ggplot(mdata)+ geom_point(aes(x=PC.Type, y=AR_GSET), position = position_jitter(0.1))+ theme_classic()
+ggplot(mdata)+ geom_point(aes(x=PC.Type, y=AR), position = position_jitter(0.1))+ theme_classic()
+ggplot(mdata)+ geom_point(aes(x=AR_GSET, y=AR, color=PC.Type))+ theme_classic()
 
 myScale = function(x){
   ((2*(x-min(x)) )/(max(x)-min(x)))-1
@@ -90,29 +88,36 @@ tmp$Subtype = factor(tmp$Subtype, levels=c("ARPC",  "DNPC","NEPC"))
 tmp = tmp[order(tmp$Subtype),]
 rownames(tmp) = NULL
 
-Heatmap(top_annotation = HeatmapAnnotation(Subtype = tmp$Subtype, col=list(Subtype=c("ARPC"= "darkgreen", "NEPC" = "orange", "DNPC"= "blue")) ),
+Heatmap(top_annotation = HeatmapAnnotation(Subtype = tmp$Subtype, col=list(Subtype=c("ARPC"= "#4889C7", "NEPC" = "#93355A", "DNPC"= "#1010C0")) ),
   t(tmp[,c( "AR", "AR_GSET", "KLK3","KLK2","TMPRSS2","FKBP5","NKX3-1","PLPP1","PMEPA1","PART1","ALDH1A3","STEAP4", "NE_GSET","SYP","CHGA","CHGB","ENO2","CHRNB2","SCG3","SCN3A","PCSK1","ELAVL4","NKX2-1"  )]),
         row_split = c( "AR", "AR score", rep("AR score genes", 10), "NE score", rep("NE score genes", 10)),
         column_split = tmp$Subtype,
         cluster_rows = F, cluster_columns = F, use_raster = F, 
 )
 
-
+dev.off()
+palette_subtypes = c("#25681E", "#F63A21","#4889C7", "#1010C0", "#93355A")
 mdata$Subtype=as.character(mdata$PC.Type)
 mdata$Subtype[mdata$Name %in% tmp$Name[tmp$Subtype == "ARPC"]]="ARPC"
 mdata$Subtype[mdata$Name %in% tmp$Name[tmp$Subtype == "DNPC"]]="DNPC"
 mdata$Subtype[mdata$Name %in% tmp$Name[tmp$Subtype == "NEPC"]]="NEPC"
-ggplot(mdata)+ geom_point(aes(x=NE_GSET, y=AR_GSET, color=Subtype))
+mdata$Subtype = factor(mdata$Subtype, levels=c("NORMAL", "PRIMARY","ARPC", "DNPC", "NEPC"))
 
 
-ggplot(mdata)+ geom_point(aes(y=AR_GSET, x=NE_GSET, color=Subtype))
-ggplot(mdata)+ geom_point(aes(y=AR, x=NE_GSET, color=Subtype))
+pdf(paste0(outdir, "/Subtypes.pdf"), width = 8, height = 6)
+ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, fill=Subtype), shape=21, size=3) + theme_classic() +
+  scale_fill_manual(values = palette_subtypes)
+ggplot(mdata)+ geom_point(aes(x=NE_GSET, y=AR_GSET, fill=Subtype), shape=21, size=3) + theme_classic() +
+  scale_fill_manual(values = palette_subtypes)
+ggplot(mdata)+ geom_point(aes(y=AR, x=NE_GSET, fill=Subtype), shape=21, size=3) + theme_classic() +
+  scale_fill_manual(values = palette_subtypes)
 
-ggplot(mdata)+ geom_point(aes(x=PC1, y=PC2, color=Subtype))
 dev.off()
 
-
 ### Estimate score
+library(utils)
+rforge <- "http://r-forge.r-project.org"
+install.packages("estimate", repos=rforge, dependencies=TRUE)
 library(estimate)
 
 out_f = "./estimate.gct"
@@ -158,10 +163,13 @@ mdata$ESTIMATE.Score = scores$ESTIMATEScore
 
 
 
-pdf("./SignaturesGraphs/Estimate.pdf", width = 10)
-ggplot(mdata) + geom_point(aes(x=PC1, y=PC2, color=ESTIMATE.Immune.Score))
-ggplot(mdata) + geom_point(aes(x=PC1, y=PC2, color=ESTIMATE.Stromal.Score))
-ggplot(mdata) + geom_point(aes(x=PC1, y=PC2, color=ESTIMATE.Score))
+pdf(paste0(outdir, "/Estimate.pdf"), width = 8, height = 6)
+ggplot(mdata) + geom_point(aes(x=PC1, y=PC2, fill=ESTIMATE.Immune.Score), size=3, shape=21) +
+  theme_classic() + scale_fill_gradient2(low="blue", high="red", midpoint = (max(mdata$ESTIMATE.Immune.Score) + min(mdata$ESTIMATE.Immune.Score) )/2 )
+ggplot(mdata) + geom_point(aes(x=PC1, y=PC2, fill=ESTIMATE.Stromal.Score), size=3, shape=21) +
+  theme_classic() + scale_fill_gradient2(low="blue", high="red", midpoint = (max(mdata$ESTIMATE.Stromal.Score) + min(mdata$ESTIMATE.Stromal.Score) )/2 )
+ggplot(mdata) + geom_point(aes(x=PC1, y=PC2, fill=ESTIMATE.Score), size=3, shape=21) +
+  theme_classic() + scale_fill_gradient2(low="blue", high="red", midpoint = (max(mdata$ESTIMATE.Score) + min(mdata$ESTIMATE.Score) )/2 )
 
 center = data.frame( x =(min(mdata$PC1) + max(mdata$PC1) )/2, y= (min(mdata$PC2) + max(mdata$PC2) )/2)
 center$y=center$y+15
@@ -182,42 +190,55 @@ saveRDS(mdata, "./objects/mdata_signatures.RDS")
 ###  Plot signatures
 
 m_df = msigdbr(species = "Homo sapiens", category="H")
+GS = list()
 
 for ( gsn in unique(m_df$gs_name)){
-  target_gene_list = rownames(txi.gene$abundance)[gsub("\\..*" , "", rownames(txi.gene$abundance)) %in% m_df$human_ensembl_gene[m_df$gs_name == gsn] ];
-  h.ssgsea <- gsva(txi.gene$abundance[keep,], list(gsn = target_gene_list), method = "ssgsea", parallel.sz=4,  mx.diff=TRUE, ssgsea.norm	=T)
-  mdata[,gsn]=h.ssgsea[1,]
+  GS[[gsn]] =rownames(txi.gene$abundance)[gsub("\\..*" , "", rownames(txi.gene$abundance)) %in% m_df$human_ensembl_gene[m_df$gs_name == gsn] ];
 }
 
-pdf("./SignaturesGraphs/PCA_individual_Hallmarks.pdf")
-for ( gsn in unique(m_df$gs_name)){
-  if ( gsn %in% colnames(mdata)){
+h.ssgsea <- gsva(txi.gene$abundance[keep,mdata$Name], GS, method = "ssgsea", parallel.sz=4,  mx.diff=TRUE, ssgsea.norm	=T)
+h.ssgsea = t(h.ssgsea)
+all(rownames(h.ssgsea) == mdata$Name)
+mdata[,colnames(h.ssgsea)]=h.ssgsea
+
+
+pdf(paste0(outdir,"/PCA_individual_Hallmarks.pdf"), width = 8, height = 6)
+for ( gsn in names(GS)){
     tmp = data.frame(PC1=mdata$PC1, PC2=mdata$PC2, h=mdata[,gsn])
     tmp$h = (2*((tmp$h - min(tmp$h)) / (max(tmp$h)- min(tmp$h)))) -1
-    p<-ggplot(tmp) + geom_point(aes(x=PC1, y=PC2, color=h))+ggtitle(gsn)+
-      scale_color_gradient2(low = "blue", high = "red", mid = "grey")
+    p<-ggplot(tmp) + geom_point(aes(x=PC1, y=PC2, fill=h), shape=21, size=3)+ggtitle(gsn)+ theme_classic()+
+      scale_fill_gradient2(low = "blue", high = "red", mid = "grey")
     print(p)  
-  }
 }
 dev.off()
 
 
 
-pdf("./SignaturesGraphs/signatures_PCA.pdf")
+pdf(paste0(outdir,"/signatures_PCA.pdf"), width = 8, height = 6)
 for ( gsn in c("AR", "AR_GSET", "NE_GSET", "ESTIMATE.Immune.Score", "ESTIMATE.Stromal.Score", "ESTIMATE.Score")){
   if ( gsn %in% colnames(mdata)){
     tmp = data.frame(PC1=mdata$PC1, PC2=mdata$PC2, h=mdata[,gsn])
     tmp$h = (2*((tmp$h - min(tmp$h)) / (max(tmp$h)- min(tmp$h)))) -1
-    p<-ggplot(tmp) + geom_point(aes(x=PC1, y=PC2, color=h))+ggtitle(gsn)+
-      scale_color_gradient2(low = "blue", high = "red", mid = "grey")
+    p<-ggplot(tmp) + geom_point(aes(x=PC1, y=PC2, fill=h), shape=21, size=3)+ggtitle(gsn)+ theme_classic()+
+      scale_fill_gradient2(low = "blue", high = "red", mid = "grey")
     print(p)  
   }
 }
 dev.off()
-
+install.packages("factoextra")
 library(factoextra)
-
-pca = pcaPlot(ncount, mdata$Subtype, ngenes=nrow(ncount[keep,]))
+pcaPlot <- function(indata=NULL,  colorRef=NULL,  ngenes=500, pca=NULL){
+  if ( is.null(pca) ){
+    rv_all= rowVars(indata)
+    pcagenes_all = rownames(indata)[order(rv_all, decreasing = TRUE)]
+    selected_all = pcagenes_all[1:ngenes]
+    pca = prcomp( t(indata[selected_all,]))  
+  }
+  percentVar <- setNames(object = round(100* pca$sdev^2/sum(pca$sdev^2)), nm = colnames(pca$x))
+  print(ggplot(data.frame(PC1=pca$x[,1], PC2=pca$x[,2], color = colorRef ))+geom_point(aes(x=PC1, y=PC2, color=color))+ylab(paste("PC2",percentVar[2],"%"))+xlab(paste("PC1", percentVar[1],"%")))
+  return(pca)
+}
+pca = pcaPlot(ncount, mdata$Subtype, ngenes=2000)
 percentVar <- setNames(object = round(100* pca$sdev^2/sum(pca$sdev^2)), nm = colnames(pca$x))
 pca.var = get_pca_var(pca)
 
@@ -235,7 +256,7 @@ gene_list = list(PC1 = gsub("\\..*", "" , rownames(pca.contrib)[pca.contrib[,1]>
 universe=gsub("\\..*", "",rownames(ncount[keep,]))
 summary(gene_list)
 base_name="PCA_Importances"
-base_dir="./GO/"
+base_dir=paste0(outdir,"/GO/")
 dir.create(base_dir, recursive = T,showWarnings =F)
 categories = c("H")
 for ( cat in categories ){
@@ -257,7 +278,7 @@ for ( cat in categories ){
 }
 categories=c("H")
 base_name="PCA_Importances"
-base_dir="./GSEA/"
+base_dir=paste0(outdir,"/GSEA/")
 dir.create(base_dir, recursive = T,showWarnings =F)
 for ( cat in categories){
   m_df = msigdbr(species = "Homo sapiens", category=cat)
@@ -275,4 +296,23 @@ for ( cat in categories){
     }
   }
 }
+
+
+### Databases division
+
+library(treemapify)
+
+mdata.datasets = mdata %>% group_by(Dataset, Subtype) %>% summarise(count = n())
+mdata.datasets$Subtype = factor(mdata.datasets$Subtype, levels=c("NORMAL", "PRIMARY", "ARPC", "DNPC", "NEPC"))
+mdata.datasets$label = paste0(mdata.datasets$Dataset, "\nN=",mdata.datasets$count)
+mdata.datasets$size = mdata.datasets$count
+mdata.datasets$size[mdata.datasets$size < 10]=10
+pdf(paste0(outdir,"/datasets.pdf"))
+ggplot(mdata.datasets, aes(area=size, group=Dataset, fill=Subtype, subgroup=Subtype)) + geom_treemap() +  geom_treemap_subgroup_border(colour="black", size=3)+
+  geom_treemap_text(aes(label=label), place="centre", color="white", min.size = 0)+
+  scale_fill_manual(values=palette_subtypes)
+dev.off()
+
+  
+
 

@@ -1,25 +1,15 @@
 #!/usr/bin/Rscript
 
 
-neededlibraries <- c("ggpubr",  "tximport",  "reshape2", "readr", "DESeq2", "ggplot2", "dplyr", "VennDiagram", "plotly", "msigdbr", "limma", "pathfindR", "GSVA")
+neededlibraries <- c( "tximport",  "reshape2", "readr", "DESeq2", "ggplot2", "dplyr", "VennDiagram", "plotly", "msigdbr", "limma", "GSVA")
 loaded_libraries = lapply(neededlibraries, require, character.only = TRUE)
-
+palette_subtypes = c("#25681E", "#F63A21","#4889C7", "#1010C0", "#93355A")
 heatmapSamples = function(indata, ngenes=500){
   rv_all= rowVars(indata)
   pcagenes_all = rownames(indata)[order(rv_all, decreasing = TRUE)]
   selected_all = pcagenes_all[1:ngenes]
   corr_mat = round(cor(indata[selected_all,]),2)
   heatmap(corr_mat)
-}
-
-pcaPlot <- function(indata, colorRef, ngenes=500, x=1, y=2){
-  rv_all= rowVars(indata)
-  pcagenes_all = rownames(indata)[order(rv_all, decreasing = TRUE)]
-  selected_all = pcagenes_all[1:ngenes]
-  pca = prcomp(t(indata[selected_all,]))
-  percentVar <- setNames(object = round(100* pca$sdev^2/sum(pca$sdev^2)), nm = colnames(pca$x))
-  print(ggplot(data.frame(x=pca$x[,x], y=pca$x[,y], color = colorRef ))+geom_point(aes(x=x, y=y, color=color))+ylab(paste0("PC",y, " ",percentVar[y],"%"))+xlab(paste("PC", x," " , percentVar[x],"%"))) 
-  return(pca)
 }
 
 plotCount= function(mat, rowN, fnames){
@@ -201,12 +191,6 @@ getSign <- function(df, f_name){
 }
 
 
-
-#!/usr/bin/Rscript
-library("ggplot2")
-
-library(STRINGdb)
-
 dotPlot = function(res, out_file, plot_dir="./plots/"){
   tmp = res@result[res@result$p.adjust < 0.05,]
   if ( nrow(tmp) > 0 ){
@@ -342,15 +326,6 @@ dotPlotListGSEA = function(res_list, out_file, plot_dir="./plots/"){
     dev.off()
     write.csv(all_res, paste0(plot_dir, out_file, ".csv"), row.names = F)  
   }
-}
-
-stringPlot = function(indata, min_score=0.15){
-  string_db <- STRINGdb$new()
-  mapped = string_db$map( data.frame(gene=names(indata), log2FC = as.numeric(indata) ) , "gene", removeUnmappedRows = TRUE )
-  payload_id <- string_db$post_payload( mapped$STRING_id, 
-                                        colors=ifelse(mapped$log2FC < 0 , "blue", "red" ) )
-  
-  string_db$plot_network( mapped$STRING_id, payload_id=payload_id , required_score = min_score, add_summary = T, add_link=F)
 }
 
 
