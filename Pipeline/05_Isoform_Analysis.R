@@ -57,38 +57,34 @@ dat = dat[dat$tx_type == "protein_coding", ]
 dat = merge(dat, data.frame(gid = g_info$gene_id, name = g_info$gene_name), by="gid", all.x=T, all.y=F)
 dat = merge(dat, data.frame(tx = tx_names$transcript_id, protein = tx_names$protein_id, tx_name = tx_names$transcript_name), by="tx")
 
-dat_bkup = dat
-dat = dat[abs(dat$gCorr) < 0.4 ,]
 outdir="./results_05_Isoform_analysis/"
 
 dir.create(outdir, showWarnings = F)
 columns_to_write= c("tx", "tx_name", "protein", "gid", "name", "corr", "stat", "padj", "pval", "gCorr", "tx_type")
 
-write.csv(dat_bkup[order(dat_bkup$corr),columns_to_write], paste0(outdir,"Correlations.csv"), row.names = F)
-write.csv(dat_bkup[abs(dat_bkup$corr) > 0.5 & abs(dat_bkup$gCorr) < 0.4 ,columns_to_write], paste0(outdir,"Correlations_Filtered.csv"), row.names = F)
-write.csv(dat_bkup[order(dat_bkup$corr),columns_to_write][1:100,], paste0(outdir,"Correlations_bottom_100_all.csv"), row.names = F)
-write.csv(dat[order(dat$corr),columns_to_write][1:100,], paste0(outdir,"Correlations_bottom_100_LowGeneCorr.csv"), row.names = F)
-write.csv(dat_bkup[order(dat_bkup$corr, decreasing = T),columns_to_write][1:100,], paste0(outdir,"Correlations_top_100_all.csv"), row.names = F)
-write.csv(dat[order(dat$corr, decreasing = T),columns_to_write][1:100,], paste0(outdir,"Correlations_top_100_LowGeneCorr.csv"), row.names = F)
-dat.filtered = dat_bkup[abs(dat_bkup$corr) > 0.5 & abs(dat_bkup$gCorr) < 0.4 ,columns_to_write]
+write.csv(dat[order(dat$corr),columns_to_write], paste0(outdir,"Correlations.csv"), row.names = F)
+write.csv(dat[abs(dat$corr) > 0.5 & abs(dat$gCorr) < 0.4 ,columns_to_write], paste0(outdir,"Correlations_Filtered.csv"), row.names = F)
+dat.filtered = dat[abs(dat$corr) > 0.5 & abs(dat$gCorr) < 0.4 ,columns_to_write]
 nrow(dat.filtered)
 sum(dat.filtered$corr < 0)
 sum(dat.filtered$corr > 0)
-to_plot = dat
+to_plot = dat[abs(dat$gCorr) < 0.4,]
 to_plot$color = "grey"
 to_plot$color[abs(to_plot$corr) > 0.50 & abs(to_plot$gCorr) < 0.4]="red"
 to_plot$color[to_plot$name == "AR"]="blue"
 to_plot$label = paste(to_plot$tx, to_plot$tx_name, to_plot$name,sep="\n")
+top_n = 5
 to_show= c( to_plot$tx[to_plot$name == "AR"], to_plot$tx[to_plot$color == "red" & 
-                                                           to_plot$name %in% c("ERF","MXI1", "CYHR1", "SPTAN1")])
-to_plot$to_show=to_plot$label
-to_plot$to_show[! to_plot$tx %in% to_show]=""
+                                                           to_plot$name %in% c("ERF","MXI1")], 
+            to_plot[order(to_plot$corr), "tx"][1:top_n],to_plot[order(to_plot$corr, decreasing = T), "tx"][1:top_n])
 pdf(paste0(outdir,"Isoforms_correlations_Filtered.pdf"), width = 10, height = 7)
+to_plot$to_show=to_plot$tx_name
+to_plot$to_show[! to_plot$tx %in% to_show]=""
 ggplot(to_plot, aes(x=corr, y=stat, label=to_show))+
   geom_point(data=to_plot[to_plot$color == "grey", ], color="grey", size=3 ) + 
   geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), color="red", size=4 )+
   geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), color="blue", size=4 )+
-  geom_label_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = .5, force = 5) + theme_classic()+ 
+  geom_text_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = .5, force = 5) + theme_classic()+ 
   xlab("Pearson Correlation Coefficient") + ylab("Pearson's product moment statistic")
 dev.off()
 
@@ -97,7 +93,7 @@ to_show = to_plot$tx[to_plot$name %in% c("ERF")]
 to_plot$color = "grey"
 to_plot$color[abs(to_plot$corr) > 0.50 & abs(to_plot$gCorr) < 0.4]="red"
 to_plot$color[to_plot$tx %in% to_show] = "blue"
-to_plot$to_show=to_plot$label
+to_plot$to_show=to_plot$tx_name
 to_plot$to_show[! to_plot$tx %in% to_show]=""
 
 pdf(paste0(outdir,"Isoforms_correlations_ERF.pdf"), width = 10, height = 7)
@@ -105,7 +101,7 @@ ggplot(to_plot, aes(x=corr, y=stat, label=to_show))+
   geom_point(data=to_plot[to_plot$color == "grey", ], color="grey", size=3 ) + 
   geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), color="red", size=4 )+
   geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), color="blue", size=4 )+
-  geom_label_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = 0.5, force=5) + theme_classic()+ 
+  geom_text_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = 0.5, force=5) + theme_classic()+ 
   xlab("Pearson Correlation Coefficient") + ylab("Pearson's product moment statistic")
 dev.off()
 
@@ -117,7 +113,7 @@ to_show = names(to_show)[1:4]
 to_plot$color = "grey"
 to_plot$color[abs(to_plot$corr) > 0.50 & abs(to_plot$gCorr) < 0.4]="red"
 to_plot$color[to_plot$tx %in% to_show] = "blue"
-to_plot$to_show=to_plot$label
+to_plot$to_show=to_plot$tx_name
 to_plot$to_show[! to_plot$tx %in% to_show]=""
 
 pdf(paste0(outdir,"Isoforms_correlations_MXI1.pdf"), width = 10, height = 7)
@@ -125,10 +121,346 @@ ggplot(to_plot, aes(x=corr, y=stat, label=to_show))+
   geom_point(data=to_plot[to_plot$color == "grey", ], color="grey", size=3 ) + 
   geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), color="red", size=4 )+
   geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), color="blue", size=4 )+
-  geom_label_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = 0.5, force=5) + theme_bw()+ 
+  geom_text_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = 0.5, force=5) + theme_classic()+ 
   xlab("Pearson Correlation Coefficient") + ylab("Pearson's product moment statistic")
 dev.off()
 
+### ERF plots and DE analysis
+gene_name = "ERF"
+gene_id = g_info$gene_id[g_info$gene_name == gene_name]
+isoforms = tx_names[tx_names$transcript_id %in% dat$tx[dat$name %in% c(gene_name)],]
+target_tx = isoforms$transcript_id[isoforms$transcript_name == "ERF-202"]
+dat_comp = data.frame(
+  ncount = ncount.txi[target_tx, mdata$Name[onlyPE]],
+  sample = mdata$Name[onlyPE],
+  subtype = mdata$Subtype[onlyPE]
+)
+
+n_global = sum(dat_comp$ncount == 0 )
+n_PRIMARY =  sum(dat_comp$ncount[dat_comp$subtype == "PRIMARY"] == 0 )
+n_ARPC =  sum(dat_comp$ncount[dat_comp$subtype == "ARPC"] == 0 )
+
+dat_comp$global_comparison = ""
+dat_comp$PRIMARY_comparison = ""
+dat_comp$ARPC_comparison = ""
+dat_comp = dat_comp[order(dat_comp$ncount),]
+dat_comp$global_comparison[1:n_global] = "Low"
+dat_comp$PRIMARY_comparison[dat_comp$subtype == "PRIMARY"][1:n_PRIMARY] = "Low"
+dat_comp$ARPC_comparison[dat_comp$subtype == "ARPC"][1:n_ARPC] = "Low"
+dat_comp = dat_comp[order(dat_comp$ncount, decreasing = T),]
+dat_comp$global_comparison[1:n_global] = "High"
+dat_comp$PRIMARY_comparison[dat_comp$subtype == "PRIMARY"][1:n_PRIMARY] = "High"
+dat_comp$ARPC_comparison[dat_comp$subtype == "ARPC"][1:n_ARPC] = "High"
+rownames(dat_comp) = dat_comp$sample
+
+to_plot= data.frame(
+  id = gene_id,
+  name = gene_name,
+  ncount = ncount[gene_id, mdata$Name[onlyPE]],
+  sample = mdata$Name[onlyPE],
+  subtype = mdata$Subtype[onlyPE],
+  pseudotime = mdata$pseudotime[onlyPE]
+)
+for ( i in 1:nrow(isoforms)){
+  to_plot = rbind(to_plot, data.frame(
+    id = isoforms$transcript_id[i],
+    name = isoforms$transcript_name[i],
+    ncount = ncount.txi[isoforms$transcript_id[i], mdata$Name[onlyPE]],
+    sample = mdata$Name[onlyPE],
+    subtype = mdata$Subtype[onlyPE],
+    pseudotime = mdata$pseudotime[onlyPE]
+  ))
+}
+to_plot = merge(to_plot, dat_comp[,c("sample", "global_comparison", "PRIMARY_comparison", "ARPC_comparison")], by="sample")
+dir.create(paste0(outdir, "/ERF/"), showWarnings = F)
+pdf(paste0(outdir, "/ERF/ncount_vs_pseudotime.pdf"), width = 8, height = 9)
+ggplot(to_plot,aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype), size=3, shape=21)+ geom_smooth() + 
+  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes)
+ggplot() + geom_point(data=to_plot[to_plot$global_comparison == "",], aes(x=pseudotime, y=ncount), size=3, shape=21, alpha=0.5, fill="grey") + 
+   geom_point(data=to_plot[to_plot$global_comparison == "Low",], aes(x=pseudotime, y=ncount), size=3, shape=21, fill="blue") +
+   geom_point(data=to_plot[to_plot$global_comparison == "High",], aes(x=pseudotime, y=ncount), size=3, shape=21,  fill="red") +
+  facet_grid(rows=vars(name))+ theme_bw() + ggtitle("Samples division for the global comparison")
+ggplot() + geom_point(data=to_plot[to_plot$PRIMARY_comparison == "",], aes(x=pseudotime, y=ncount), size=3, shape=21, alpha=0.5, fill="grey") + 
+  geom_point(data=to_plot[to_plot$PRIMARY_comparison == "Low",], aes(x=pseudotime, y=ncount), size=3, shape=21, fill="blue") +
+  geom_point(data=to_plot[to_plot$PRIMARY_comparison == "High",], aes(x=pseudotime, y=ncount), size=3, shape=21,  fill="red") +
+  facet_grid(rows=vars(name))+ theme_bw()+ ggtitle("Samples division for the PRIMARY samples comparison")
+ggplot() + geom_point(data=to_plot[to_plot$ARPC_comparison == "",], aes(x=pseudotime, y=ncount), size=3, shape=21, alpha=0.5, fill="grey") + 
+  geom_point(data=to_plot[to_plot$ARPC_comparison == "Low",], aes(x=pseudotime, y=ncount), size=3, shape=21, fill="blue") +
+  geom_point(data=to_plot[to_plot$ARPC_comparison == "High",], aes(x=pseudotime, y=ncount), size=3, shape=21,  fill="red") +
+  facet_grid(rows=vars(name))+ theme_bw()+ ggtitle("Samples division for the ARPC samples comparison")
+dev.off()
+
+to_plot = merge(to_plot, mdata[,c("Name", "ESTIMATE.Stromal.Score", "ESTIMATE.Immune.Score")], by.x="sample", by.y="Name")
+pdf(paste0(outdir,"/ERF/StromalContribution.pdf"))
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Stromal.Score", "global_comparison", "PRIMARY_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=global_comparison, y=ESTIMATE.Stromal.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Stromal.Score", "global_comparison", "PRIMARY_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=PRIMARY_comparison, y=ESTIMATE.Stromal.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Stromal.Score", "global_comparison", "PRIMARY_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=ARPC_comparison, y=ESTIMATE.Stromal.Score))+ theme_classic()
+dev.off()
+pdf(paste0(outdir,"/ERF/ImmuneContribution.pdf"))
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Immune.Score", "global_comparison", "PRIMARY_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=global_comparison, y=ESTIMATE.Immune.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Immune.Score", "global_comparison", "PRIMARY_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=PRIMARY_comparison, y=ESTIMATE.Immune.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Immune.Score", "global_comparison", "PRIMARY_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=ARPC_comparison, y=ESTIMATE.Immune.Score))+ theme_classic()
+dev.off()
+
+
+### DE and GSEA 
+library(clusterProfiler)
+gsea.results = list()
+de.results = list()
+comparisons = data.frame(name = c("GLOBAL", "PRIMARY", "ARPC"), col = c("global_comparison", "PRIMARY_comparison", "ARPC_comparison"))
+dir.create(paste0(outdir, "/ERF/Comparisons/"), recursive = T, showWarnings = F)
+for ( i in 1:nrow(comparisons) ){
+  comp_name = comparisons$name[i]
+  comp_col =  comparisons$col[i]
+  cmp_mdata = dat_comp[dat_comp[,comp_col] != "",c("sample", comp_col)]
+  colnames(cmp_mdata) = c("sample", "condition")
+  cmp_mdata$condition = factor(cmp_mdata$condition, levels = c("Low", "High"))
+  tmp_txi = txi.gene
+  for ( name in names(tmp_txi)[names(tmp_txi) != "countsFromAbundance"]){
+    tmp_txi[[name]] = tmp_txi[[name]][,cmp_mdata$sample]
+  }
+  
+  dds = DESeqDataSetFromTximport(tmp_txi, cmp_mdata, design = ~condition)
+  keep <- rowSums(tmp_txi$counts > 10) >= max((ncol(tmp_txi$counts)*0.05), 2) & grepl("\\.[0-9]+$", rownames(tmp_txi$counts))
+  sum(keep) / length(keep)
+  dds <- DESeq(dds[keep,])
+  res = as.data.frame(results(dds, independentFiltering = T))
+  res$name = rownames(res)
+  res = merge(res, g_info, by.x="name", by.y="gene_id")
+  de.results[[comp_name]]=res
+  res= res[order(res$log2FoldChange),]
+  pdf(paste0(outdir, "/ERF/Comparisons/VolcanoPlot_", comp_name, ".pdf"))
+  p<-ggplot(mapping = aes(x=log2FoldChange, y=-log10(padj)))+ geom_point(data= res[res$log2FoldChange < -1 & res$padj < 0.05 ,], color="blue")+
+    geom_point(data= res[res$log2FoldChange > 1 & res$padj < 0.05 ,], color="red")+
+    geom_point(data= res[abs(res$log2FoldChange) <= 1 | res$padj >= 0.05 ,], color="grey")+ theme_classic() +
+    geom_text_repel(data= res[c(1:5, (nrow(res)-5):nrow(res) ), ], aes(label=gene_name))
+  print(p)
+  dev.off()
+  write.csv(res, paste0(outdir, "/ERF/Comparisons/DESeq2_", comp_name, ".csv"), row.names = F)
+  stat = res$stat
+  names(stat) = gsub( "\\..*$", "", res$name)
+  h_gs = msigdbr(species= "Homo sapiens", category="H")
+  res.gsea = GSEA(sort(stat, decreasing=T), TERM2GENE = h_gs[,c("gs_name", "ensembl_gene")], minGSSize = 1, maxGSSize = 1000,seed=123, pvalueCutoff=1, verbose = F)
+  gsea.results[[comp_name]] = res.gsea@result[,c("ID", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalue", "rank")]
+}
+
+to_plot = NULL
+for ( name in names(gsea.results)){
+  gsea.results[[name]]$comparison = name
+  to_plot = rbind(to_plot, gsea.results[[name]])
+}
+to_plot = merge(to_plot, h_groups, by.x="ID", by.y="hallmark")
+to_plot$HALLMARK = gsub("_", " ", gsub("HALLMARK_", "", to_plot$ID))
+to_plot$comparison = factor(to_plot$comparison , levels=c("GLOBAL", "PRIMARY", "ARPC"))
+pdf(paste0(outdir, "/ERF/GSEA.pdf"), width = 10, height = 10)
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+dev.off()
+
+high_samples = mdata[mdata$pseudotime > 150,]
+corr.dat = g_info[g_info$gene_id %in% rownames(txi.gene$counts)[rowSums(txi.gene$counts[,high_samples$Name] > 0) > (nrow(high_samples)*0.10) ],]
+corr.dat = corr.dat[grepl("\\.[0-9]+$", corr.dat$gene_id),]
+corr.dat = corr.dat %>% rowwise() %>% mutate(corr = cor(high_samples$pseudotime, ncount[gene_id,high_samples$Name]), stat = cor.test(high_samples$pseudotime, ncount[gene_id,high_samples$Name])$statistic )
+stat = corr.dat$stat
+names(stat) = gsub( "\\..*$", "", corr.dat$gene_id)
+h_gs = msigdbr(species= "Homo sapiens", category="H")
+res.gsea = GSEA(sort(stat, decreasing=T), TERM2GENE = h_gs[,c("gs_name", "ensembl_gene")], minGSSize = 1, maxGSSize = 1000,seed=123, pvalueCutoff=1, verbose = F)
+res.gsea = res.gsea@result
+res.gsea$comparison = "HighPseudotime"
+
+to_plot = NULL
+for ( name in names(gsea.results)){
+  gsea.results[[name]]$comparison = name
+  to_plot = rbind(to_plot, gsea.results[[name]])
+}
+colnames(to_plot)
+to_plot = rbind(to_plot, res.gsea[,colnames(to_plot)])
+to_plot = merge(to_plot, h_groups, by.x="ID", by.y="hallmark")
+to_plot$HALLMARK = gsub("_", " ", gsub("HALLMARK_", "", to_plot$ID))
+to_plot$comparison = factor(to_plot$comparison , levels=c("GLOBAL", "PRIMARY", "ARPC", "HighPseudotime"))
+pdf(paste0(outdir, "/ERF/GSEA_plus.pdf"), width = 10, height = 10)
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+dev.off()
+
+####
+
+tmp = de.results$ARPC
+tmp = tmp[tmp$padj < 0.05 ,]
+tmp = tmp[order(tmp$log2FoldChange),]
+tmp = tmp[!grepl("^ENSG", tmp$gene_name),]
+ERF_LOW_SIGNATURE = tmp$gene_name[1:100]
+ERF_LOW_SIGNATURE = tmp$name[1:100]
+to_keep = rownames(txi.gene$counts)[rowSums(txi.gene$counts[,mdata$Name] > 10) > 10]
+
+res = gsva(as.matrix(ncount[to_keep,mdata$Name,drop=F]), list(ERF_LOW_SIGNATURE=ERF_LOW_SIGNATURE), mx.diff=TRUE, method = "ssgsea", parallel.sz=4, ssgsea.norm=F)
+res=t(res)
+res = as.data.frame(res)
+res$Name = rownames(res)
+mdata.ssgsea = merge(mdata, res, by="Name")
+pdf(paste0(outdir, "/ERF/ARPC_ERF_minor_signature.pdf"))
+ggplot(mdata.ssgsea) + geom_point(aes(x=PC1, y=PC2, fill=ERF_LOW_SIGNATURE), shape=21, size=3)+scale_fill_gradient2(low = "blue", high = "red")+ theme_classic()
+ggplot(mdata.ssgsea) + geom_point(aes(x=pseudotime, y=ERF_LOW_SIGNATURE, fill=Subtype), shape=21, size=3)+scale_fill_manual(values=palette_subtypes) + theme_classic()
+ggplot(mdata.ssgsea) + geom_point(aes(x=pseudotime, y=ERF_LOW_SIGNATURE, fill=Subtype), shape=21, size=3)+scale_fill_manual(values=palette_subtypes) + theme_classic() + xlim(c(150,250))
+dev.off()
+
+
+
+### MXI1 plots and DE analysis
+gene_name = "MXI1"
+gene_id = g_info$gene_id[g_info$gene_name == gene_name]
+isoforms = tx_names[tx_names$transcript_id %in% dat$tx[dat$name %in% c(gene_name)],]
+isoforms = isoforms[isoforms$transcript_name %in% c("MXI1-202", "MXI1-201", "MXI1-214"),]
+target_tx = isoforms$transcript_id[isoforms$transcript_name == "MXI1-214"]
+dat_comp = data.frame(
+  ncount = ncount.txi[target_tx, mdata$Name[onlyPE]],
+  sample = mdata$Name[onlyPE],
+  subtype = mdata$Subtype[onlyPE]
+)
+
+n_ARPC =  min(sum(dat_comp$ncount[dat_comp$subtype == "ARPC"] == 0 ),sum(dat_comp$ncount[dat_comp$subtype == "ARPC"] > 0 ))
+n_DNPC =  min(sum(dat_comp$ncount[dat_comp$subtype == "DNPC"] == 0 ),sum(dat_comp$ncount[dat_comp$subtype == "DNPC"] > 0 ))
+n_NEPC =  min(sum(dat_comp$ncount[dat_comp$subtype == "NEPC"] == 0 ),sum(dat_comp$ncount[dat_comp$subtype == "NEPC"] > 0 ))
+
+dat_comp$NEPC_comparison = ""
+dat_comp$DNPC_comparison = ""
+dat_comp$ARPC_comparison = ""
+dat_comp$NEPC_comparison[dat_comp$subtype == "NEPC" & dat_comp$ncount == 0 ] = "Low"
+dat_comp$DNPC_comparison[dat_comp$subtype == "DNPC" & dat_comp$ncount == 0 ] = "Low"
+dat_comp$ARPC_comparison[dat_comp$subtype == "ARPC" & dat_comp$ncount == 0 ] = "Low"
+dat_comp$NEPC_comparison[dat_comp$subtype == "NEPC" & dat_comp$ncount > 0 ] = "High"
+dat_comp$DNPC_comparison[dat_comp$subtype == "DNPC" & dat_comp$ncount > 0 ] = "High"
+dat_comp$ARPC_comparison[dat_comp$subtype == "ARPC" & dat_comp$ncount > 0 ] = "High"
+rownames(dat_comp) = dat_comp$sample
+
+to_plot= data.frame(
+  id = gene_id,
+  name = gene_name,
+  ncount = ncount[gene_id, mdata$Name[onlyPE]],
+  sample = mdata$Name[onlyPE],
+  subtype = mdata$Subtype[onlyPE],
+  pseudotime = mdata$pseudotime[onlyPE]
+)
+for ( i in 1:nrow(isoforms)){
+  to_plot = rbind(to_plot, data.frame(
+    id = isoforms$transcript_id[i],
+    name = isoforms$transcript_name[i],
+    ncount = ncount.txi[isoforms$transcript_id[i], mdata$Name[onlyPE]],
+    sample = mdata$Name[onlyPE],
+    subtype = mdata$Subtype[onlyPE],
+    pseudotime = mdata$pseudotime[onlyPE]
+  ))
+}
+to_plot = merge(to_plot, dat_comp[,c("sample", "NEPC_comparison", "DNPC_comparison", "ARPC_comparison")], by="sample")
+dir.create(paste0(outdir, "/MXI1/"), showWarnings = F)
+pdf(paste0(outdir, "/MXI1/ncount_vs_pseudotime.pdf"), width = 8, height = 9)
+ggplot(to_plot,aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype),size=3, shape=21) + geom_smooth()+
+  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes)
+ggplot() + geom_point(data=to_plot[to_plot$ARPC_comparison == "",], aes(x=pseudotime, y=ncount), size=3, shape=21, alpha=0.5, fill="grey") + 
+  geom_point(data=to_plot[to_plot$ARPC_comparison == "Low",], aes(x=pseudotime, y=ncount), size=3, shape=21, fill="blue") +
+  geom_point(data=to_plot[to_plot$ARPC_comparison == "High",], aes(x=pseudotime, y=ncount), size=3, shape=21,  fill="red") +
+  facet_grid(rows=vars(name))+ theme_bw() + ggtitle("Samples division for the ARPC samples comparison")
+ggplot() + geom_point(data=to_plot[to_plot$NEPC_comparison == "",], aes(x=pseudotime, y=ncount), size=3, shape=21, alpha=0.5, fill="grey") + 
+  geom_point(data=to_plot[to_plot$NEPC_comparison == "Low",], aes(x=pseudotime, y=ncount), size=3, shape=21, fill="blue") +
+  geom_point(data=to_plot[to_plot$NEPC_comparison == "High",], aes(x=pseudotime, y=ncount), size=3, shape=21,  fill="red") +
+  facet_grid(rows=vars(name))+ theme_bw()+ ggtitle("Samples division for the NEPC samples comparison")
+ggplot() + geom_point(data=to_plot[to_plot$DNPC_comparison == "",], aes(x=pseudotime, y=ncount), size=3, shape=21, alpha=0.5, fill="grey") + 
+  geom_point(data=to_plot[to_plot$DNPC_comparison == "Low",], aes(x=pseudotime, y=ncount), size=3, shape=21, fill="blue") +
+  geom_point(data=to_plot[to_plot$DNPC_comparison == "High",], aes(x=pseudotime, y=ncount), size=3, shape=21,  fill="red") +
+  facet_grid(rows=vars(name))+ theme_bw()+ ggtitle("Samples division for the DNPC samples comparison")
+dev.off()
+
+to_plot = merge(to_plot, mdata[,c("Name", "ESTIMATE.Stromal.Score", "ESTIMATE.Immune.Score")], by.x="sample", by.y="Name")
+pdf(paste0(outdir,"/MXI1/StromalContribution.pdf"))
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Stromal.Score", "NEPC_comparison", "DNPC_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=ARPC_comparison, y=ESTIMATE.Stromal.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Stromal.Score", "NEPC_comparison", "DNPC_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=NEPC_comparison, y=ESTIMATE.Stromal.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Stromal.Score", "NEPC_comparison", "DNPC_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=DNPC_comparison, y=ESTIMATE.Stromal.Score))+ theme_classic()
+dev.off()
+pdf(paste0(outdir,"/MXI1/ImmuneContribution.pdf"))
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Immune.Score", "NEPC_comparison", "DNPC_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=ARPC_comparison, y=ESTIMATE.Immune.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Immune.Score", "NEPC_comparison", "DNPC_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=NEPC_comparison, y=ESTIMATE.Immune.Score))+ theme_classic()
+ggplot(unique(to_plot[,c("name", "ESTIMATE.Immune.Score", "NEPC_comparison", "DNPC_comparison", "ARPC_comparison")]))+
+  geom_boxplot(aes(x=DNPC_comparison, y=ESTIMATE.Immune.Score))+ theme_classic()
+dev.off()
+
+
+
+### DE and GSEA 
+library(clusterProfiler)
+gsea.results = list()
+de.results = list()
+comparisons = data.frame(name = c("ARPC", "NEPC", "DNPC"), col = c("ARPC_comparison", "NEPC_comparison", "DNPC_comparison"))
+dir.create(paste0(outdir, "/MXI1/Comparisons/"), recursive = T, showWarnings = F)
+for ( i in 1:nrow(comparisons) ){
+  comp_name = comparisons$name[i]
+  comp_col =  comparisons$col[i]
+  cmp_mdata = dat_comp[dat_comp[,comp_col] != "",c("sample", comp_col)]
+  colnames(cmp_mdata) = c("sample", "condition")
+  cmp_mdata$condition = factor(cmp_mdata$condition, levels = c("Low", "High"))
+  tmp_txi = txi.gene
+  for ( name in names(tmp_txi)[names(tmp_txi) != "countsFromAbundance"]){
+    tmp_txi[[name]] = tmp_txi[[name]][,cmp_mdata$sample]
+  }
+  
+  dds = DESeqDataSetFromTximport(tmp_txi, cmp_mdata, design = ~condition)
+  keep <- rowSums(tmp_txi$counts > 10) >= max((ncol(tmp_txi$counts)*0.05), 2) & grepl("\\.[0-9]+$", rownames(tmp_txi$counts))
+  sum(keep) / length(keep)
+  dds <- DESeq(dds[keep,])
+  res = as.data.frame(results(dds, independentFiltering = T))
+  res$name = rownames(res)
+  res = merge(res, g_info, by.x="name", by.y="gene_id")
+  de.results[[comp_name]]=res
+  res= res[order(res$log2FoldChange),]
+  pdf(paste0(outdir, "/MXI1/Comparisons/VolcanoPlot_", comp_name, ".pdf"))
+  p<-ggplot(mapping = aes(x=log2FoldChange, y=-log10(padj)))+ geom_point(data= res[res$log2FoldChange < -1 & res$padj < 0.05 ,], color="blue")+
+    geom_point(data= res[res$log2FoldChange > 1 & res$padj < 0.05 ,], color="red")+
+    geom_point(data= res[abs(res$log2FoldChange) <= 1 | res$padj >= 0.05 ,], color="grey")+ theme_classic() +
+    geom_text_repel(data= res[c(1:5, (nrow(res)-5):nrow(res) ), ], aes(label=gene_name))
+  print(p)
+  dev.off()
+  write.csv(res, paste0(outdir, "/MXI1/Comparisons/DESeq2_", comp_name, ".csv"), row.names = F)
+  stat = res$stat
+  names(stat) = gsub( "\\..*$", "", res$name)
+  h_gs = msigdbr(species= "Homo sapiens", category="H")
+  res.gsea = GSEA(sort(stat, decreasing=T), TERM2GENE = h_gs[,c("gs_name", "ensembl_gene")], minGSSize = 1, maxGSSize = 1000,seed=123, pvalueCutoff=1, verbose = F)
+  gsea.results[[comp_name]] = res.gsea@result[,c("ID", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalue", "rank")]
+}
+
+to_plot = NULL
+for ( name in names(gsea.results)){
+  gsea.results[[name]]$comparison = name
+  to_plot = rbind(to_plot, gsea.results[[name]])
+}
+to_plot = merge(to_plot, h_groups, by.x="ID", by.y="hallmark")
+to_plot$HALLMARK = gsub("_", " ", gsub("HALLMARK_", "", to_plot$ID))
+to_plot$comparison = factor(to_plot$comparison , levels=c("ARPC", "DNPC", "NEPC"))
+pdf(paste0(outdir, "/MXI1/GSEA.pdf"), width = 10, height = 10)
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+dev.off()
+
+
+###
 
 ### AR V-7 analysis
 palette_subtypes = c("#25681E", "#F63A21","#4889C7", "#1010C0", "#93355A")
@@ -269,4 +601,23 @@ ggplot(to_plot) + geom_point(aes(x=pseudotime, y=ncount, fill=Subtype), shape=21
 ggplot(to_plot) + geom_point(aes(x=pseudotime, y=perc, fill=Subtype), shape=21, size=3) + theme_classic() + 
   scale_fill_manual(values = palette_subtypes) + facet_grid(rows = vars(isoform)) + xlab("Disease Progression") + ylab("transcript/gene count")
 dev.off()
+
+### 
+
+tcga_psa = read.table("./metadata/nationwidechildrens.org_clinical_patient_prad.tsv", sep="\t", header=T)
+tcga_psa$psa_value = as.numeric(tcga_psa$psa_value)
+tcga_psa = tcga_psa[!is.na(tcga_psa$psa_value),]
+nrow(tcga_psa)
+sum(tcga_psa$bcr_patient_barcode %in% mdata$Patient)
+mdata.tcga = merge(mdata, tcga_psa, by.x="Patient", by.y = "bcr_patient_barcode")
+mdata.tcga = mdata.tcga[!is.na(mdata.tcga$psa_value),]
+mdata.tcga = mdata.tcga[mdata.tcga$Subtype == "PRIMARY",]
+pdf("./psa_levels_pseudotime.pdf")
+ggplot(mdata.tcga) + geom_point(aes(x=pseudotime, y=log10(psa_value+1)))+ theme_bw()
+ggplot(mdata.tcga) + geom_point(aes(x=pseudotime, y=psa_value))+ theme_bw()
+dev.off()
+summary(factor(mdata.tcga$biochemical_recurrence))
+summary(factor(mdata.tcga$primary_therapy_outcome_success))
+summary(factor(mdata.tcga$new_tumor_event_after_initial_treatment))
+summary(factor(mdata.tcga$residual_tumor))
 

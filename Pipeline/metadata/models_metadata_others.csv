@@ -1,0 +1,41 @@
+name,sample_name,LibraryType,cohort,type,AlignmentType
+VCAP_PROSTATE,VCAP_PROSTATE,PAIRED,CellLine,VCAP,Human
+PC3_PROSTATE,PC3_PROSTATE,PAIRED,CellLine,PC3,Human
+DU145_PROSTATE,DU145_PROSTATE,PAIRED,CellLine,DU145,Human
+LNCAPCLONEFGC_PROSTATE,LNCAPCLONEFGC_PROSTATE,PAIRED,CellLine,LnCaP,Human
+MDAPCA2B_PROSTATE,MDAPCA2B_PROSTATE,PAIRED,CellLine,MDAPCA2B,Human
+PRECLH_PROSTATE,PRECLH_PROSTATE,PAIRED,CellLine,PRECLH,Human
+NCIH660_PROSTATE,NCIH660_PROSTATE,PAIRED,CellLine,NCIH660,Human
+22RV1_PROSTATE,22RV1_PROSTATE,PAIRED,CellLine,22RV1,Human
+LnCaP_ABL,LnCaP_ABL,PAIRED,CellLine,LnCaP_ABL,Human
+LnCaP_DB,LnCaP_DB,PAIRED,CellLine,LnCaP_DB,Human
+LnCaP_DKO,LnCaP_DKO,PAIRED,CellLine,LnCaP_DKO,Human
+LnCaP_Nelson,LnCaP_Nelson,PAIRED,CellLine,LnCaP_Nelson,Human
+LnCaP_P53,LnCaP_P53,PAIRED,CellLine,LnCaP_P53,Human
+ERR922709,LTL331_pre_Cx (bio1),PAIRED,LTL_longitudinal,LTL331_PreCx,Human-Murine
+ERR922710,LTL331_pre_Cx (bio2),PAIRED,LTL_longitudinal,LTL331_PreCx,Human-Murine
+ERR922711,LTL331_Cx_8wk,PAIRED,LTL_longitudinal,LTL331_Cx_8w,Human-Murine
+ERR922712,LTL331_Cx_12wk,PAIRED,LTL_longitudinal,LTL331_Cx_12w,Human-Murine
+ERR922713,LTL331_Cx_relapsed_NEPC (bio1),PAIRED,LTL_longitudinal,LTL331_Cx_R,Human-Murine
+ERR922714,LTL331_Cx_relapsed_NEPC (bio2),PAIRED,LTL_longitudinal,LTL331_Cx_R,Human-Murine
+LUCAP_147-Xeno_rep1,LUCAP_147-Xeno_rep1,SINGLE,PDX_longitudinal,LuCaP_147,Human-Murine
+LUCAP_147-Xeno_rep2,LUCAP_147-Xeno_rep2,SINGLE,PDX_longitudinal,LuCaP_147,Human-Murine
+LUCAP_147-Xeno_rep3,LUCAP_147-Xeno_rep3,SINGLE,PDX_longitudinal,LuCaP_147,Human-Murine
+LNCaP-Xeno_rep1,LNCaP-Xeno_rep1,SINGLE,PDX_longitudinal,LnCaP,Human-Murine
+LNCaP-Xeno_rep2,LNCaP-Xeno_rep2,SINGLE,PDX_longitudinal,LnCaP,Human-Murine
+LNCaP-Xeno_rep3,LNCaP-Xeno_rep3,SINGLE,PDX_longitudinal,LnCaP,Human-Murine
+LNCaP-ABL-Xeno_rep1,LNCaP-ABL-Xeno_rep1,SINGLE,PDX_longitudinal,LnCaP_ABL,Human-Murine
+LNCaP-ABL-Xeno_rep2,LNCaP-ABL-Xeno_rep2,SINGLE,PDX_longitudinal,LnCaP_ABL,Human-Murine
+LNCaP-ABL-Xeno_rep3,LNCaP-ABL-Xeno_rep3,SINGLE,PDX_longitudinal,LnCaP_ABL,Human-Murine
+LnCaP_DKO_CX_R1,LnCaP_DKO_CX_R1,SINGLE,PDX_longitudinal,LnCaP_DKO_CX,Human-Murine
+LnCaP_DKO_CX_R2,LnCaP_DKO_CX_R2,SINGLE,PDX_longitudinal,LnCaP_DKO_CX,Human-Murine
+LnCaP_DKO_CX_R3,LnCaP_DKO_CX_R3,SINGLE,PDX_longitudinal,LnCaP_DKO_CX,Human-Murine
+LnCaP_DKO_Enza_R1,LnCaP_DKO_Enza_R1,SINGLE,PDX_longitudinal,LnCaP_DKO_ENZA,Human-Murine
+LnCaP_DKO_Enza_R2,LnCaP_DKO_Enza_R2,SINGLE,PDX_longitudinal,LnCaP_DKO_ENZA,Human-Murine
+LnCaP_DKO_Enza_R3,LnCaP_DKO_Enza_R3,SINGLE,PDX_longitudinal,LnCaP_DKO_ENZA,Human-Murine
+LnCaP_DKO_PreCX_R1,LnCaP_DKO_PreCX_R1,SINGLE,PDX_longitudinal,LnCaP_DKO_PreCX,Human-Murine
+LnCaP_DKO_PreCX_R2,LnCaP_DKO_PreCX_R2,SINGLE,PDX_longitudinal,LnCaP_DKO_PreCX,Human-Murine
+LnCaP_DKO_PreCX_R3,LnCaP_DKO_PreCX_R3,SINGLE,PDX_longitudinal,LnCaP_DKO_PreCX,Human-Murine
+LUCAP_CX_147_Xeno_R1,LUCAP_CX_147_Xeno_R1,SINGLE,PDX_longitudinal,LuCaP_147_CX,Human-Murine
+LUCAP_CX_147_Xeno_R2,LUCAP_CX_147_Xeno_R2,SINGLE,PDX_longitudinal,LuCaP_147_CX,Human-Murine
+LUCAP_CX_147_Xeno_R3,LUCAP_CX_147_Xeno_R3,SINGLE,PDX_longitudinal,LuCaP_147_CX,Human-Murine
