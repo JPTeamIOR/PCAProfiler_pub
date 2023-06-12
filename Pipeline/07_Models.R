@@ -295,14 +295,96 @@ for ( i in 1:nrow(isoforms)){
 }
 
 to_plot = merge(to_plot, mdata[,c("name", "type")], by.x="sample" , by.y="name")
+str(to_plot)
+to_save = to_plot %>% select(-c("id")) %>% pivot_wider(names_from = name, values_from = ncount )
+write.csv(to_save, paste0(outdir, "ERF_PDX.csv"), row.names = F)
 
 pdf(paste0(outdir, "ERF.pdf"))
 ggplot(to_plot, aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype), size=3, shape=21) + 
-  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes)
-ggplot(to_plot, aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype), size=3, shape=21) + 
-  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes) + geom_text_repel(aes(label=type), size=3)
+  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes[2:5])
+dev.off()
+pdf(paste0(outdir, "ERF_202_with_names.pdf"), width = 10, height = 7)
+ggplot(to_plot[to_plot$name == "ERF-202",], aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype), size=3, shape=21) + 
+   theme_bw() +scale_fill_manual(values = palette_subtypes[2:5])+ geom_text_repel(aes(label=type), size=2, max.overlaps = Inf)
 dev.off()
 
+### GSEA of PDX with low/none expression of ERF-202 and high
+de.results.human = readRDS("./objects/ERF_DE.RDS")
+de.results = de.results.human$DE
+gsea.results = de.results.human$GSEA
+comp_name = "PDX"
+cmp_mdata = to_save
+cmp_mdata$condition = ifelse(cmp_mdata$`ERF-202` == 0 , "Low", "High")
+summary(factor(cmp_mdata$condition))
+cmp_mdata = cmp_mdata[,c("sample", "condition")]
+cmp_mdata$condition = factor(cmp_mdata$condition, levels = c("Low", "High"))
+
+tmp_txi = txi.gene
+for ( name in names(tmp_txi)[names(tmp_txi) != "countsFromAbundance"]){
+  tmp_txi[[name]] = tmp_txi[[name]][,cmp_mdata$sample]
+}
+
+dds = DESeqDataSetFromTximport(tmp_txi, cmp_mdata, design = ~condition)
+keep <- rowSums(tmp_txi$counts > 10) >= max((ncol(tmp_txi$counts)*0.05), 2) & grepl("\\.[0-9]+$", rownames(tmp_txi$counts))
+sum(keep) / length(keep)
+dds <- DESeq(dds[keep,])
+res = as.data.frame(results(dds, independentFiltering = T))
+res$name = rownames(res)
+res = merge(res, g_info, by.x="name", by.y="gene_id")
+
+de.results[[comp_name]]=res
+res= res[order(res$log2FoldChange),]
+dir.create(paste0(outdir, "ERF/"))
+pdf(paste0(outdir, "/ERF/VolcanoPlot_", comp_name, ".pdf"))
+p<-ggplot(mapping = aes(x=log2FoldChange, y=-log10(padj)))+ geom_point(data= res[res$log2FoldChange < -1 & res$padj < 0.05 ,], color="blue")+
+  geom_point(data= res[res$log2FoldChange > 1 & res$padj < 0.05 ,], color="red")+
+  geom_point(data= res[abs(res$log2FoldChange) <= 1 | res$padj >= 0.05 ,], color="grey")+ theme_classic() +
+  geom_text_repel(data= res[c(1:5, (nrow(res)-5):nrow(res) ), ], aes(label=gene_name))
+print(p)
+dev.off()
+write.csv(res, paste0(outdir, "/ERF/DESeq2_", comp_name, ".csv"), row.names = F)
+stat = res$stat
+names(stat) = gsub( "\\..*$", "", res$name)
+h_gs = msigdbr(species= "Homo sapiens", category="H")
+res.gsea = GSEA(sort(stat, decreasing=T), TERM2GENE = h_gs[,c("gs_name", "ensembl_gene")], minGSSize = 1, maxGSSize = 1000,seed=123, pvalueCutoff=1, verbose = F)
+gsea.results[[comp_name]] = res.gsea@result[,c("ID", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalue", "rank")]
+
+
+to_plot = NULL
+for ( name in names(gsea.results)){
+  gsea.results[[name]]$comparison = name
+  to_plot = rbind(to_plot, gsea.results[[name]])
+}
+to_plot = merge(to_plot, h_groups, by.x="ID", by.y="hallmark")
+to_plot$HALLMARK = gsub("_", " ", gsub("HALLMARK_", "", to_plot$ID))
+to_plot$comparison = factor(to_plot$comparison , levels=c("GLOBAL", "PRIMARY", "ARPC", "PDX"))
+pdf(paste0(outdir, "/ERF/GSEA.pdf"), width = 10, height = 10)
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+dev.off()
+
+tx_composition = de.results.human$DAT_COMP %>% group_by(subtype) %>% summarise(n_low = sum(ncount == 0), n_high = sum(ncount > 0 ), tot=n())
+tx_composition = rbind(tx_composition, data.frame(subtype="PDX", n_low = sum(cmp_mdata$condition == "Low"), n_high = sum(cmp_mdata$condition == "High"), tot = nrow(cmp_mdata)))
+tx_composition = tx_composition %>% pivot_longer(cols = c(n_low, n_high))
+tx_composition$perc = 100*tx_composition$value / tx_composition$tot
+tx_composition$alpha = ifelse(tx_composition$name == 'n_low', 1, 0.8)
+tx_composition = tx_composition %>% 
+  group_by(subtype) %>%
+  arrange(desc(perc)) %>%
+  mutate(ypos = cumsum(perc)- 0.5*perc )
+
+pdf(paste0(outdir, "/ERF/Percentages.pdf"))
+ggplot(tx_composition,  aes(x="", y=perc))+
+  geom_bar(aes(alpha=name, fill=subtype),stat="identity", width=1) + scale_fill_manual(values=c(palette_subtypes, "#FFBB56"))+
+  geom_text(aes(y = ypos, label = value), color = "black", size=6) + scale_alpha_discrete(range = c(0.7,1))+
+  coord_polar("y", start=0) + facet_wrap(vars(subtype)) + theme_classic()+ ylab("") + xlab("")+
+  theme(axis.text = element_blank(), axis.line = element_blank(), axis.ticks = element_blank())
+dev.off()
+
+### do the same for MXI1
 
 gene_name = "MXI1"
 gene_id = g_info$gene_id[g_info$gene_name == gene_name]
@@ -331,15 +413,97 @@ for ( i in 1:nrow(isoforms)){
 }
 
 to_plot = merge(to_plot, mdata[,c("name", "type")], by.x="sample" , by.y="name")
+str(to_plot)
+to_save = to_plot %>% select(-c("id")) %>% pivot_wider(names_from = name, values_from = ncount )
+write.csv(to_save, paste0(outdir, "MXI1_PDX.csv"), row.names = F)
+
 
 pdf(paste0(outdir, "MXI1.pdf"))
 ggplot(to_plot, aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype), size=3, shape=21) + 
-  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes)
-ggplot(to_plot, aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype), size=3, shape=21) + 
-  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes) + geom_text_repel(aes(label=type), size=3)
+  facet_grid(rows=vars(name))+ theme_bw() +scale_fill_manual(values = palette_subtypes[2:5])
+dev.off()
+pdf(paste0(outdir, "MXI1_214_with_names.pdf"), width = 10, height = 7)
+ggplot(to_plot[to_plot$name == "MXI1-214",], aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=subtype), size=3, shape=21) + 
+  theme_bw() +scale_fill_manual(values = palette_subtypes[2:5])+ geom_text_repel(aes(label=type), size=2, max.overlaps = Inf)
 dev.off()
 
 
+### GSEA of PDX with low/none expression of MXI1-214 and high
+de.results.human = readRDS("./objects/MXI1_DE.RDS")
+de.results = de.results.human$DE
+gsea.results = de.results.human$GSEA
+comp_name = "PDX"
+cmp_mdata = to_save
+cmp_mdata$condition = ifelse(cmp_mdata$`MXI1-214` == 0 , "Low", "High")
+summary(factor(cmp_mdata$condition))
+cmp_mdata = cmp_mdata[,c("sample", "condition")]
+cmp_mdata$condition = factor(cmp_mdata$condition, levels = c("Low", "High"))
+
+tmp_txi = txi.gene
+for ( name in names(tmp_txi)[names(tmp_txi) != "countsFromAbundance"]){
+  tmp_txi[[name]] = tmp_txi[[name]][,cmp_mdata$sample]
+}
+
+dds = DESeqDataSetFromTximport(tmp_txi, cmp_mdata, design = ~condition)
+keep <- rowSums(tmp_txi$counts > 10) >= max((ncol(tmp_txi$counts)*0.05), 2) & grepl("\\.[0-9]+$", rownames(tmp_txi$counts))
+sum(keep) / length(keep)
+dds <- DESeq(dds[keep,])
+res = as.data.frame(results(dds, independentFiltering = T))
+res$name = rownames(res)
+res = merge(res, g_info, by.x="name", by.y="gene_id")
+
+de.results[[comp_name]]=res
+res= res[order(res$log2FoldChange),]
+dir.create(paste0(outdir, "MXI1/"))
+pdf(paste0(outdir, "/MXI1/VolcanoPlot_", comp_name, ".pdf"))
+p<-ggplot(mapping = aes(x=log2FoldChange, y=-log10(padj)))+ geom_point(data= res[res$log2FoldChange < -1 & res$padj < 0.05 ,], color="blue")+
+  geom_point(data= res[res$log2FoldChange > 1 & res$padj < 0.05 ,], color="red")+
+  geom_point(data= res[abs(res$log2FoldChange) <= 1 | res$padj >= 0.05 ,], color="grey")+ theme_classic() +
+  geom_text_repel(data= res[c(1:5, (nrow(res)-5):nrow(res) ), ], aes(label=gene_name))
+print(p)
+dev.off()
+write.csv(res, paste0(outdir, "/MXI1/DESeq2_", comp_name, ".csv"), row.names = F)
+stat = res$stat
+names(stat) = gsub( "\\..*$", "", res$name)
+h_gs = msigdbr(species= "Homo sapiens", category="H")
+res.gsea = GSEA(sort(stat, decreasing=T), TERM2GENE = h_gs[,c("gs_name", "ensembl_gene")], minGSSize = 1, maxGSSize = 1000,seed=123, pvalueCutoff=1, verbose = F)
+gsea.results[[comp_name]] = res.gsea@result[,c("ID", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalue", "rank")]
+
+
+to_plot = NULL
+for ( name in names(gsea.results)){
+  gsea.results[[name]]$comparison = name
+  to_plot = rbind(to_plot, gsea.results[[name]])
+}
+to_plot = merge(to_plot, h_groups, by.x="ID", by.y="hallmark")
+to_plot$HALLMARK = gsub("_", " ", gsub("HALLMARK_", "", to_plot$ID))
+to_plot$comparison = factor(to_plot$comparison , levels=c("ARPC", "DNPC", "NEPC", "PDX"))
+pdf(paste0(outdir, "/MXI1/GSEA.pdf"), width = 10, height = 10)
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+dev.off()
+
+
+tx_composition = de.results.human$DAT_COMP %>% group_by(subtype) %>% summarise(n_low = sum(ncount == 0), n_high = sum(ncount > 0 ), tot=n())
+tx_composition = rbind(tx_composition, data.frame(subtype="PDX", n_low = sum(cmp_mdata$condition == "Low"), n_high = sum(cmp_mdata$condition == "High"), tot = nrow(cmp_mdata)))
+tx_composition = tx_composition %>% pivot_longer(cols = c(n_low, n_high))
+tx_composition$perc = 100*tx_composition$value / tx_composition$tot
+tx_composition$alpha = ifelse(tx_composition$name == 'n_low', 1, 0.8)
+tx_composition = tx_composition %>% 
+  group_by(subtype) %>%
+  arrange(desc(perc)) %>%
+  mutate(ypos = cumsum(perc)- 0.5*perc )
+
+pdf(paste0(outdir, "/MXI1/Percentages.pdf"))
+ggplot(tx_composition,  aes(x="", y=perc))+
+  geom_bar(aes(alpha=name, fill=subtype),stat="identity", width=1) + scale_fill_manual(values=c(palette_subtypes, "#FFBB56"))+
+  geom_text(aes(y = ypos, label = value), color = "black", size=6) + scale_alpha_discrete(range = c(0.7,1))+
+  coord_polar("y", start=0) + facet_wrap(vars(subtype)) + theme_classic()+ ylab("") + xlab("")+
+  theme(axis.text = element_blank(), axis.line = element_blank(), axis.ticks = element_blank())
+dev.off()
 
 
 ### Other models
@@ -532,5 +696,103 @@ other.models.validation.by_gene = other.models.validation %>% group_by(gene_id, 
 
 write.csv(other.models.validation.by_gene, paste0(outdir, "/other_models_by_gene.csv"), row.names = F)
 write.csv(other.models.validation.by_gene[other.models.validation.by_gene$gene_name %in% genes_to_print,], paste0(outdir, "/other_models_by_gene_candidates.csv"), row.names = F)
+
+### ERF
+
+gene_name = "ERF"
+gene_id = g_info$gene_id[g_info$gene_name == gene_name]
+isoforms = tx_names[tx_names$transcript_name %in% c("ERF-201", "ERF-202", "ERF-203"),]
+target_tx = isoforms$transcript_id[isoforms$transcript_name == "ERF-202"]
+
+
+to_plot= data.frame(
+  id = gene_id,
+  name = gene_name,
+  ncount = oncount[gene_id, omdata$name],
+  sample = omdata$name,
+  cohort = omdata$cohort,
+  pseudotime = omdata$pseudotime
+)
+
+for ( i in 1:nrow(isoforms)){
+  to_plot = rbind(to_plot, data.frame(
+    id = gene_id,
+    name = isoforms$transcript_name[i],
+    ncount = oncount.txi[isoforms$transcript_id[i], omdata$name],
+    sample = omdata$name,
+    cohort = omdata$cohort,
+    pseudotime = omdata$pseudotime
+  ))
+}
+
+to_plot = merge(to_plot, omdata[,c("name", "type")], by.x="sample" , by.y="name")
+str(to_plot)
+to_save = to_plot %>% select(-c("id")) %>% pivot_wider(names_from = name, values_from = ncount )
+write.csv(to_save, paste0(outdir, "ERF_Other.csv"), row.names = F)
+
+pdf(paste0(outdir, "ERF_other.pdf"))
+for ( cohort in unique(to_plot$cohort)){
+  p<-ggplot(to_plot[to_plot$cohort == cohort,], aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=type), size=3, shape=21) + 
+    facet_grid(rows=vars(name))+ theme_bw() + ggtitle(cohort)
+  print(p)
+}
+dev.off()
+pdf(paste0(outdir, "ERF_others_202_with_names.pdf"), width = 10, height = 7)
+for ( cohort in unique(to_plot$cohort)){
+  p<-ggplot(to_plot[to_plot$name == "ERF-202" & to_plot$cohort == cohort,], aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=type), size=3, shape=21) + 
+    theme_bw() + geom_text_repel(aes(label=type), size=2, max.overlaps = Inf)
+  print(p)
+}
+dev.off()
+
+### MXI1
+
+
+gene_name = "MXI1"
+gene_id = g_info$gene_id[g_info$gene_name == gene_name]
+isoforms = tx_names[tx_names$transcript_name %in% c("MXI1-201", "MXI1-202", "MXI1-214"),]
+target_tx = isoforms$transcript_id[isoforms$transcript_name == "ERF-214"]
+
+
+to_plot= data.frame(
+  id = gene_id,
+  name = gene_name,
+  ncount = oncount[gene_id, omdata$name],
+  sample = omdata$name,
+  cohort = omdata$cohort,
+  pseudotime = omdata$pseudotime
+)
+
+for ( i in 1:nrow(isoforms)){
+  to_plot = rbind(to_plot, data.frame(
+    id = gene_id,
+    name = isoforms$transcript_name[i],
+    ncount = oncount.txi[isoforms$transcript_id[i], omdata$name],
+    sample = omdata$name,
+    cohort = omdata$cohort,
+    pseudotime = omdata$pseudotime
+  ))
+}
+
+to_plot = merge(to_plot, omdata[,c("name", "type")], by.x="sample" , by.y="name")
+str(to_plot)
+to_save = to_plot %>% select(-c("id")) %>% pivot_wider(names_from = name, values_from = ncount )
+write.csv(to_save, paste0(outdir, "MXI1_Other.csv"), row.names = F)
+
+pdf(paste0(outdir, "MXI1_other.pdf"))
+for ( cohort in unique(to_plot$cohort)){
+  p<-ggplot(to_plot[to_plot$cohort == cohort,], aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=type), size=3, shape=21) + 
+    facet_grid(rows=vars(name))+ theme_bw() + ggtitle(cohort)
+  print(p)
+}
+dev.off()
+pdf(paste0(outdir, "MXI1_others_214_with_names.pdf"), width = 10, height = 7)
+for ( cohort in unique(to_plot$cohort)){
+  p<-ggplot(to_plot[to_plot$name == "MXI1-214" & to_plot$cohort == cohort,], aes(x=pseudotime, y=ncount)) + geom_point(aes(fill=type), size=3, shape=21) + 
+    theme_bw() + geom_text_repel(aes(label=type), size=2, max.overlaps = Inf)
+  print(p)
+}
+dev.off()
+
 
 

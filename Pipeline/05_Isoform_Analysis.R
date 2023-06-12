@@ -82,9 +82,10 @@ to_plot$to_show=to_plot$tx_name
 to_plot$to_show[! to_plot$tx %in% to_show]=""
 ggplot(to_plot, aes(x=corr, y=stat, label=to_show))+
   geom_point(data=to_plot[to_plot$color == "grey", ], color="grey", size=3 ) + 
-  geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), color="red", size=4 )+
-  geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), color="blue", size=4 )+
+  geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), fill="red", size=4 , shape=21)+
+  geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), fill="blue", size=4, shape=21 )+
   geom_text_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = .5, force = 5) + theme_classic()+ 
+  geom_vline(xintercept = c(-0.5, 0.5), linetype=2)+
   xlab("Pearson Correlation Coefficient") + ylab("Pearson's product moment statistic")
 dev.off()
 
@@ -99,9 +100,10 @@ to_plot$to_show[! to_plot$tx %in% to_show]=""
 pdf(paste0(outdir,"Isoforms_correlations_ERF.pdf"), width = 10, height = 7)
 ggplot(to_plot, aes(x=corr, y=stat, label=to_show))+
   geom_point(data=to_plot[to_plot$color == "grey", ], color="grey", size=3 ) + 
-  geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), color="red", size=4 )+
-  geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), color="blue", size=4 )+
+  geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), fill="red", size=4 , shape=21)+
+  geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), fill="blue", size=4, shape=21 )+
   geom_text_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = 0.5, force=5) + theme_classic()+ 
+  geom_vline(xintercept = c(-0.5, 0.5), linetype=2)+
   xlab("Pearson Correlation Coefficient") + ylab("Pearson's product moment statistic")
 dev.off()
 
@@ -119,9 +121,10 @@ to_plot$to_show[! to_plot$tx %in% to_show]=""
 pdf(paste0(outdir,"Isoforms_correlations_MXI1.pdf"), width = 10, height = 7)
 ggplot(to_plot, aes(x=corr, y=stat, label=to_show))+
   geom_point(data=to_plot[to_plot$color == "grey", ], color="grey", size=3 ) + 
-  geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), color="red", size=4 )+
-  geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), color="blue", size=4 )+
+  geom_point(data=to_plot[to_plot$color == "red", ], aes(x=corr, y=stat), fill="red", size=4 , shape=21)+
+  geom_point(data=to_plot[to_plot$color == "blue", ], aes(x=corr, y=stat), fill="blue", size=4 , shape=21)+
   geom_text_repel(max.overlaps = Inf, seed=123, size=4,  nudge_y = 1, nudge_x = 0.5, force=5) + theme_classic()+ 
+  geom_vline(xintercept = c(-0.5, 0.5), linetype=2)+
   xlab("Pearson Correlation Coefficient") + ylab("Pearson's product moment statistic")
 dev.off()
 
@@ -249,7 +252,7 @@ for ( i in 1:nrow(comparisons) ){
   res.gsea = GSEA(sort(stat, decreasing=T), TERM2GENE = h_gs[,c("gs_name", "ensembl_gene")], minGSSize = 1, maxGSSize = 1000,seed=123, pvalueCutoff=1, verbose = F)
   gsea.results[[comp_name]] = res.gsea@result[,c("ID", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalue", "rank")]
 }
-
+saveRDS(list(GSEA= gsea.results, DE = de.results, DAT_COMP = dat_comp ), "./objects/ERF_DE.RDS")
 to_plot = NULL
 for ( name in names(gsea.results)){
   gsea.results[[name]]$comparison = name
@@ -287,10 +290,18 @@ to_plot = rbind(to_plot, res.gsea[,colnames(to_plot)])
 to_plot = merge(to_plot, h_groups, by.x="ID", by.y="hallmark")
 to_plot$HALLMARK = gsub("_", " ", gsub("HALLMARK_", "", to_plot$ID))
 to_plot$comparison = factor(to_plot$comparison , levels=c("GLOBAL", "PRIMARY", "ARPC", "HighPseudotime"))
+
+
+
 pdf(paste0(outdir, "/ERF/GSEA_plus.pdf"), width = 10, height = 10)
 ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
   geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
   geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+ggplot(to_plot[to_plot$comparison == "HighPseudotime",], aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$comparison == "HighPseudotime" & to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$comparison == "HighPseudotime" & to_plot$p.adjust >0.05,], alpha=0.5) +
   scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
   theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
 dev.off()
@@ -310,11 +321,23 @@ res=t(res)
 res = as.data.frame(res)
 res$Name = rownames(res)
 mdata.ssgsea = merge(mdata, res, by="Name")
-pdf(paste0(outdir, "/ERF/ARPC_ERF_minor_signature.pdf"))
+pdf(paste0(outdir, "/ERF/ARPC_ERF_minor_signature.pdf"), width = 8)
 ggplot(mdata.ssgsea) + geom_point(aes(x=PC1, y=PC2, fill=ERF_LOW_SIGNATURE), shape=21, size=3)+scale_fill_gradient2(low = "blue", high = "red")+ theme_classic()
 ggplot(mdata.ssgsea) + geom_point(aes(x=pseudotime, y=ERF_LOW_SIGNATURE, fill=Subtype), shape=21, size=3)+scale_fill_manual(values=palette_subtypes) + theme_classic()
 ggplot(mdata.ssgsea) + geom_point(aes(x=pseudotime, y=ERF_LOW_SIGNATURE, fill=Subtype), shape=21, size=3)+scale_fill_manual(values=palette_subtypes) + theme_classic() + xlim(c(150,250))
-dev.off()
+ggplot(mdata.ssgsea[mdata.ssgsea$Subtype %in% c("ARPC", "DNPC", "NEPC"),]) + geom_point(aes(x=pseudotime, y=ERF_LOW_SIGNATURE, fill=Subtype), shape=21, size=3)+
+  scale_fill_manual(values=palette_subtypes[3:5]) + theme_classic() + xlim(c(150,250)) +
+  geom_smooth(aes(x=pseudotime, y=ERF_LOW_SIGNATURE))+
+  facet_grid(rows=vars(Subtype))+ 
+  ggtitle(paste0("ARPC corr=", 
+                 round(cor(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "ARPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "ARPC" & mdata.ssgsea$pseudotime > 150]), 3),
+                 "\nDNPC corr=", 
+                 round(cor(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "DNPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "DNPC" & mdata.ssgsea$pseudotime > 150]), 3),
+                 "\nNEPC corr=", 
+                 round(cor(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150]), 3)
+                 ))
+
+dev.off() 
 
 
 
@@ -442,6 +465,7 @@ for ( i in 1:nrow(comparisons) ){
   res.gsea = GSEA(sort(stat, decreasing=T), TERM2GENE = h_gs[,c("gs_name", "ensembl_gene")], minGSSize = 1, maxGSSize = 1000,seed=123, pvalueCutoff=1, verbose = F)
   gsea.results[[comp_name]] = res.gsea@result[,c("ID", "setSize", "enrichmentScore", "NES", "pvalue", "p.adjust", "qvalue", "rank")]
 }
+saveRDS(list(GSEA= gsea.results, DE = de.results, DAT_COMP = dat_comp ), "./objects/MXI1_DE.RDS")
 
 to_plot = NULL
 for ( name in names(gsea.results)){
@@ -605,19 +629,22 @@ dev.off()
 ### 
 
 tcga_psa = read.table("./metadata/nationwidechildrens.org_clinical_patient_prad.tsv", sep="\t", header=T)
-tcga_psa$psa_value = as.numeric(tcga_psa$psa_value)
-tcga_psa = tcga_psa[!is.na(tcga_psa$psa_value),]
-nrow(tcga_psa)
-sum(tcga_psa$bcr_patient_barcode %in% mdata$Patient)
-mdata.tcga = merge(mdata, tcga_psa, by.x="Patient", by.y = "bcr_patient_barcode")
-mdata.tcga = mdata.tcga[!is.na(mdata.tcga$psa_value),]
-mdata.tcga = mdata.tcga[mdata.tcga$Subtype == "PRIMARY",]
 pdf("./psa_levels_pseudotime.pdf")
 ggplot(mdata.tcga) + geom_point(aes(x=pseudotime, y=log10(psa_value+1)))+ theme_bw()
 ggplot(mdata.tcga) + geom_point(aes(x=pseudotime, y=psa_value))+ theme_bw()
 dev.off()
 summary(factor(mdata.tcga$biochemical_recurrence))
-summary(factor(mdata.tcga$primary_therapy_outcome_success))
-summary(factor(mdata.tcga$new_tumor_event_after_initial_treatment))
-summary(factor(mdata.tcga$residual_tumor))
+### ERF-202 expression
+isoform_name = "ERF-202"
+isoform_id = tx_names$transcript_id[tx_names$transcript_name == isoform_name]
+mdata.tcga = mdata.tcga[mdata.tcga$biochemical_recurrence %in% c("NO", "YES"),]
+to_plot = mdata.tcga
+to_plot$ncount = ncount.txi[isoform_id, to_plot$Name]
+
+pdf(paste0(outdir, "/BiochemicalRecurrence_ERF_202.pdf"))
+ggplot(to_plot) + geom_boxplot(aes(x=biochemical_recurrence, y=ncount, fill=biochemical_recurrence)) + theme_classic() + 
+  ylab(paste0(isoform_name, " CPM normalized counts"))
+dev.off()
+
+
 
