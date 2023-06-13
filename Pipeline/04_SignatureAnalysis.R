@@ -114,6 +114,47 @@ ggplot(mdata)+ geom_point(aes(y=AR, x=NE_GSET, fill=Subtype), shape=21, size=3) 
 
 dev.off()
 
+### Heatmap of the top 2000 genes by variability
+
+rv_all= rowVars(ncount)
+names(rv_all) = rownames(ncount)
+genes_all = names(rv_all)[order(rv_all, decreasing = TRUE)]
+selected_all = genes_all[1:2000]
+library(ComplexHeatmap)
+mat = as.matrix(ncount[selected_all,])
+mat = t(scale(t(mat)))
+tmp = mdata
+tmp$DatasetLabel = tmp$Dataset
+tmp$DatasetLabel[tmp$Dataset %in% c("ANTE", "EIMB RAS", "Lim Y et al.")]= "Other"
+
+summary(factor(tmp$DatasetLabel))
+palette_databases = palette.colors(n=length(unique(tmp$DatasetLabel)), palette = palette.pals()[7] )
+all_databases = unique(tmp$DatasetLabel)
+test_pal = c()
+for ( i in 1:length(all_databases)){
+  test_pal[all_databases[i]]=palette_databases[i]
+}
+sub_pal = c()
+for ( i in 1:length(levels(tmp$Subtype))){
+  sub_pal[levels(tmp$Subtype)[i]] = palette_subtypes[i]
+}
+column_ha = HeatmapAnnotation(Subtype = tmp$Subtype, Dataset = tmp$DatasetLabel, LibraryType = tmp$LibraryType, libraryLayout = tmp$LibraryLayout,
+                              col = list(
+                                Subtype =sub_pal,
+                                Dataset = test_pal
+                              ))
+pdf(paste0(outdir, "/Heatmap.pdf"))
+Heatmap(mat, show_row_names = F, show_column_names = F, show_row_dend = F, show_column_dend = F, top_annotation = column_ha)
+
+rv_all= rowVars(ncount)
+names(rv_all) = rownames(ncount)
+genes_all = names(rv_all)[order(rv_all, decreasing = TRUE)]
+selected_all = genes_all[1:500]
+mat = as.matrix(ncount[selected_all,])
+mat = t(scale(t(mat)))
+
+Heatmap(mat, show_row_names = F, show_column_names = F, show_row_dend = F, show_column_dend = F, top_annotation = column_ha)
+dev.off()
 ### Estimate score
 library(utils)
 rforge <- "http://r-forge.r-project.org"

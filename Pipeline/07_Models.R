@@ -364,7 +364,43 @@ ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color =
   geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
   scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
   theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
 dev.off()
+
+### compare ARPC with PDX DE genes
+
+tmp = rbind(data.frame(
+  comparison = "PDX",
+  gene = res$gene_name, 
+  log2FC = res$log2FoldChange,
+  padj = res$padj,
+  stat = res$stat
+), data.frame(
+  comparison = "ARPC",
+  gene = de.results.human$DE$ARPC$gene_name ,
+  log2FC = de.results.human$DE$ARPC$log2FoldChange,
+  padj = de.results.human$DE$ARPC$padj,
+  stat = de.results.human$DE$ARPC$stat
+))
+
+tmp.long = tmp %>% filter(!is.na(stat)) %>% group_by(gene) %>% filter(length(unique(comparison)) == 2) %>% pivot_wider(names_from = c(comparison), values_from = c(log2FC, padj, stat), values_fn = mean)
+
+pdf(paste0(outdir, "/ERF/Human_PDX_DE_corr.pdf"))
+ggplot(tmp.long) + geom_point(aes(x=stat_PDX, y=stat_ARPC)) + theme_classic()+
+  ggtitle(paste0("Correlation: ", round(cor(tmp.long$stat_PDX, tmp.long$stat_ARPC), 2), " ( p-value ", cor.test(tmp.long$stat_PDX, tmp.long$stat_ARPC)$p.value, ")" ))
+dev.off()
+
+
+
+###
 
 tx_composition = de.results.human$DAT_COMP %>% group_by(subtype) %>% summarise(n_low = sum(ncount == 0), n_high = sum(ncount > 0 ), tot=n())
 tx_composition = rbind(tx_composition, data.frame(subtype="PDX", n_low = sum(cmp_mdata$condition == "Low"), n_high = sum(cmp_mdata$condition == "High"), tot = nrow(cmp_mdata)))
@@ -484,8 +520,33 @@ ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color =
   geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
   scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
   theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
 dev.off()
-
+pdf(paste0(outdir, "/MXI1/GSEA_light.pdf"), width = 10, height = 10)
+to_plot = to_plot[to_plot$comparison %in% c("ARPC", "PDX"),]
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=6), axis.text.y = element_text(size=5)  )
+dev.off()
 
 tx_composition = de.results.human$DAT_COMP %>% group_by(subtype) %>% summarise(n_low = sum(ncount == 0), n_high = sum(ncount > 0 ), tot=n())
 tx_composition = rbind(tx_composition, data.frame(subtype="PDX", n_low = sum(cmp_mdata$condition == "Low"), n_high = sum(cmp_mdata$condition == "High"), tot = nrow(cmp_mdata)))

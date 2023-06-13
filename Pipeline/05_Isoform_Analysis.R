@@ -61,10 +61,12 @@ outdir="./results_05_Isoform_analysis/"
 
 dir.create(outdir, showWarnings = F)
 columns_to_write= c("tx", "tx_name", "protein", "gid", "name", "corr", "stat", "padj", "pval", "gCorr", "tx_type")
+dat.filtered = dat[abs(dat$corr) > 0.5 & abs(dat$gCorr) < 0.4 ,columns_to_write]
+
 
 write.csv(dat[order(dat$corr),columns_to_write], paste0(outdir,"Correlations.csv"), row.names = F)
 write.csv(dat[abs(dat$corr) > 0.5 & abs(dat$gCorr) < 0.4 ,columns_to_write], paste0(outdir,"Correlations_Filtered.csv"), row.names = F)
-dat.filtered = dat[abs(dat$corr) > 0.5 & abs(dat$gCorr) < 0.4 ,columns_to_write]
+
 nrow(dat.filtered)
 sum(dat.filtered$corr < 0)
 sum(dat.filtered$corr > 0)
@@ -267,6 +269,15 @@ ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color =
   geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
   scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
   theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
 dev.off()
 
 high_samples = mdata[mdata$pseudotime > 150,]
@@ -299,6 +310,15 @@ ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color =
   geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
   scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
   theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
 ggplot(to_plot[to_plot$comparison == "HighPseudotime",], aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
   geom_point(data=to_plot[to_plot$comparison == "HighPseudotime" & to_plot$p.adjust <=0.05,], alpha=1) +
   geom_point(data=to_plot[to_plot$comparison == "HighPseudotime" & to_plot$p.adjust >0.05,], alpha=0.5) +
@@ -306,7 +326,7 @@ ggplot(to_plot[to_plot$comparison == "HighPseudotime",], aes(x = comparison, y= 
   theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
 dev.off()
 
-####
+####use the bot 100 genes as signature 
 
 tmp = de.results$ARPC
 tmp = tmp[tmp$padj < 0.05 ,]
@@ -315,7 +335,7 @@ tmp = tmp[!grepl("^ENSG", tmp$gene_name),]
 ERF_LOW_SIGNATURE = tmp$gene_name[1:100]
 ERF_LOW_SIGNATURE = tmp$name[1:100]
 to_keep = rownames(txi.gene$counts)[rowSums(txi.gene$counts[,mdata$Name] > 10) > 10]
-
+write.table(ERF_LOW_SIGNATURE, paste0(outdir, "/ERF/ERF_LOW_SIGNATURE.txt"), row.names = F, quote=F, col.names = F)
 res = gsva(as.matrix(ncount[to_keep,mdata$Name,drop=F]), list(ERF_LOW_SIGNATURE=ERF_LOW_SIGNATURE), mx.diff=TRUE, method = "ssgsea", parallel.sz=4, ssgsea.norm=F)
 res=t(res)
 res = as.data.frame(res)
@@ -331,10 +351,13 @@ ggplot(mdata.ssgsea[mdata.ssgsea$Subtype %in% c("ARPC", "DNPC", "NEPC"),]) + geo
   facet_grid(rows=vars(Subtype))+ 
   ggtitle(paste0("ARPC corr=", 
                  round(cor(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "ARPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "ARPC" & mdata.ssgsea$pseudotime > 150]), 3),
+                 " ( p-value ", cor.test(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "ARPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "ARPC" & mdata.ssgsea$pseudotime > 150])$p.value, ")",
                  "\nDNPC corr=", 
                  round(cor(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "DNPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "DNPC" & mdata.ssgsea$pseudotime > 150]), 3),
+                 " ( p-value ", cor.test(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "DNPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "DNPC" & mdata.ssgsea$pseudotime > 150])$p.value, ")",
                  "\nNEPC corr=", 
-                 round(cor(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150]), 3)
+                 round(cor(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150]), 3),
+                 " ( p-value ", cor.test(mdata.ssgsea$pseudotime[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150], mdata.ssgsea$ERF_LOW_SIGNATURE[mdata.ssgsea$Subtype == "NEPC" & mdata.ssgsea$pseudotime > 150])$p.value, ")"
                  ))
 
 dev.off() 
@@ -479,6 +502,15 @@ pdf(paste0(outdir, "/MXI1/GSEA.pdf"), width = 10, height = 10)
 ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
   geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
   geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.5) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
+  geom_point(data=to_plot[to_plot$p.adjust >0.05,], alpha=0.1) +
+  scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
+  theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
+ggplot(to_plot, aes(x = comparison, y= HALLMARK, size= -log10(p.adjust), color = enrichmentScore)) + 
+  geom_point(data=to_plot[to_plot$p.adjust <=0.05,], alpha=1) +
   scale_color_gradient2(low="blue", high="red")+ facet_wrap(vars(group), scales = "free") + theme_classic() + 
   theme( text =element_text(size=8), axis.text.x =element_text(size=7), axis.text.y = element_text(size=5)  )
 dev.off()

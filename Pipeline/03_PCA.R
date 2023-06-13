@@ -133,7 +133,12 @@ if ( file.exists("./objects/txi.gene.RDS") ){
   saveRDS(txi.tx$length,"./objects/txi.tx.length.RDS")
 }
 
+
+
+
+
 pca = pcaPlot(ncount, mdata$PC.Type,2000)
+
 pca$sdev = NULL
 pca$x = NULL
 tmp = predict(pca, t(ncount))
